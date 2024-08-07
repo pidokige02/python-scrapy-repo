@@ -1,4 +1,6 @@
 import scrapy
+from chocolatescraper.items import ChocolateProduct
+from chocolatescraper.itemloaders import ChocoloteProductLoader
 
 
 class ChocolatespiderSpider(scrapy.Spider):
@@ -9,19 +11,22 @@ class ChocolatespiderSpider(scrapy.Spider):
     def parse(self, response):
 
         products = response.css("product-item")
+
         for product in products:
+
+            chocolate = ChocoloteProductLoader(
+                item=ChocolateProduct(), selector=product
+            )
+
+            chocolate.add_css("name", "a.product-item-meta__title::text")
+            chocolate.add_css(
+                "price",
+                "span.price",
+                re='<span class="price price--highlight">\n              <span class="visually-hidden">Sale price</span>(.*)</span>',
+            )
+            chocolate.add_css("url", "div.product-item-meta a::attr(href)")
             # data 추출하는 용도의 yield
-            yield {
-                "name": product.css("a.product-item-meta__title::text").get(),
-                "price": product.css("span.price")
-                .get()
-                .replace(
-                    '<span class="price price--highlight">\n              <span class="visually-hidden">Sale price</span>',
-                    "",
-                )
-                .replace("</span>", ""),
-                "url": product.css("div.product-item-meta a").attrib["href"],
-            }
+            yield chocolate.load_item()
 
         next_page = response.css('[rel="next"]::attr(href)').get()
 
