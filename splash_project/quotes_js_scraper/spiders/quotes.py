@@ -2,12 +2,29 @@ import scrapy
 from quotes_js_scraper.items import QuoteItem
 from scrapy_splash import SplashRequest
 
+lua_script = """
+function main(splash, args)
+    assert(splash:go(args.url))
+
+  while not splash:select('div.quote') do
+    splash:wait(0.1)
+    print('waiting...')
+  end
+  return {html=splash:html()}
+end
+"""
+
 class QuotesSpider(scrapy.Spider):
     name = 'quotes'
 
     def start_requests(self):
-        url = 'https://quotes.toscrape.com/js/'
-        yield SplashRequest(url, callback=self.parse)
+        url = 'https://quotes.toscrape.com/scroll'
+        yield SplashRequest(
+            url,
+            callback=self.parse,
+            endpoint='execute',
+            args={'wait': 0.5, 'lua_source': lua_script,  url :'https://quotes.toscrape.com/scroll'}
+            )
 
     def parse(self, response):
         quote_item = QuoteItem()
