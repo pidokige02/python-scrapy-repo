@@ -1,18 +1,7 @@
 import scrapy
+import base64
 from quotes_js_scraper.items import QuoteItem
 from scrapy_splash import SplashRequest
-
-lua_script = """
-function main(splash,args)
-    assert(splash:go(args.url))
-
-    local element = splash:select('body > div > nav > ul > li > a')
-    element:mouse_click()
-
-    splash:wait(splash.args.wait)
-    return splash:html()
-end
-"""
 
 class QuotesSpider(scrapy.Spider):
     name = 'quotes'
@@ -22,15 +11,15 @@ class QuotesSpider(scrapy.Spider):
         yield SplashRequest(
             url,
             callback=self.parse,
-            endpoint='execute',
-            args={'wait': 2, 'lua_source': lua_script, url: 'https://quotes.toscrape.com/js/'}
-            )
-
+            endpoint='render.json',
+            args={
+                'html': 1,
+                'png': 1,
+                'width': 1000,
+            })
 
     def parse(self, response):
-        quote_item = QuoteItem()
-        for quote in response.css('div.quote'):
-            quote_item['text'] = quote.css('span.text::text').get()
-            quote_item['author'] = quote.css('small.author::text').get()
-            quote_item['tags'] = quote.css('div.tags a.tag::text').getall()
-            yield quote_item
+        imgdata = base64.b64decode(response.data['png'])
+        filename = 'some_image.png'
+        with open(filename, 'wb') as f:
+            f.write(imgdata)
